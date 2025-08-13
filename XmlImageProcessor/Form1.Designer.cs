@@ -45,6 +45,7 @@ partial class Form1
         lblImagePath = new Label();
         txtImagePath = new TextBox();
         btnBrowseImage = new Button();
+        picImagePreview = new PictureBox();
         lblOutputPath = new Label();
         txtOutputPath = new TextBox();
         btnBrowseOutput = new Button();
@@ -62,7 +63,7 @@ partial class Form1
         menuStrip.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, helpToolStripMenuItem });
         menuStrip.Location = new Point(0, 0);
         menuStrip.Name = "menuStrip";
-        menuStrip.Size = new Size(694, 28);
+        menuStrip.Size = new Size(900, 28);
         menuStrip.TabIndex = 0;
         
         // File Menu
@@ -135,6 +136,7 @@ partial class Form1
         txtImagePath.Name = "txtImagePath";
         txtImagePath.Size = new Size(475, 27);
         txtImagePath.TabIndex = 5;
+        txtImagePath.TextChanged += txtImagePath_TextChanged;
         
         // btnBrowseImage
         btnBrowseImage.Location = new Point(604, 81);
@@ -144,6 +146,16 @@ partial class Form1
         btnBrowseImage.Text = "Browse";
         btnBrowseImage.UseVisualStyleBackColor = true;
         btnBrowseImage.Click += btnBrowseImage_Click;
+        
+        // picImagePreview
+        picImagePreview.BorderStyle = BorderStyle.FixedSingle;
+        picImagePreview.Location = new Point(695, 42);
+        picImagePreview.Name = "picImagePreview";
+        picImagePreview.Size = new Size(180, 135);
+        picImagePreview.SizeMode = PictureBoxSizeMode.Zoom;
+        picImagePreview.TabIndex = 16;
+        picImagePreview.TabStop = false;
+        picImagePreview.BackColor = Color.LightGray;
         
         // lblOutputPath
         lblOutputPath.AutoSize = true;
@@ -171,23 +183,23 @@ partial class Form1
         // btnProcess
         btnProcess.BackColor = Color.LightGreen;
         btnProcess.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-        btnProcess.Location = new Point(12, 170);
+        btnProcess.Location = new Point(12, 190);
         btnProcess.Name = "btnProcess";
-        btnProcess.Size = new Size(667, 45);
+        btnProcess.Size = new Size(863, 45);
         btnProcess.TabIndex = 10;
         btnProcess.Text = "Process XML and Copy Images";
         btnProcess.UseVisualStyleBackColor = false;
         btnProcess.Click += btnProcess_Click;
         
         // progressBar
-        progressBar.Location = new Point(12, 235);
+        progressBar.Location = new Point(12, 255);
         progressBar.Name = "progressBar";
-        progressBar.Size = new Size(667, 23);
+        progressBar.Size = new Size(863, 23);
         progressBar.TabIndex = 11;
         
         // lblProgress
         lblProgress.AutoSize = true;
-        lblProgress.Location = new Point(12, 270);
+        lblProgress.Location = new Point(12, 290);
         lblProgress.Name = "lblProgress";
         lblProgress.Size = new Size(124, 20);
         lblProgress.TabIndex = 12;
@@ -195,7 +207,7 @@ partial class Form1
         
         // lblLog
         lblLog.AutoSize = true;
-        lblLog.Location = new Point(12, 305);
+        lblLog.Location = new Point(12, 325);
         lblLog.Name = "lblLog";
         lblLog.Size = new Size(82, 20);
         lblLog.TabIndex = 13;
@@ -203,19 +215,19 @@ partial class Form1
         
         // txtLog
         txtLog.Font = new Font("Consolas", 9F);
-        txtLog.Location = new Point(12, 328);
+        txtLog.Location = new Point(12, 348);
         txtLog.Multiline = true;
         txtLog.Name = "txtLog";
         txtLog.ReadOnly = true;
         txtLog.ScrollBars = ScrollBars.Both;
-        txtLog.Size = new Size(667, 200);
+        txtLog.Size = new Size(863, 200);
         txtLog.TabIndex = 14;
         txtLog.WordWrap = false;
         
         // lblStats
         lblStats.AutoSize = true;
         lblStats.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-        lblStats.Location = new Point(142, 270);
+        lblStats.Location = new Point(142, 290);
         lblStats.Name = "lblStats";
         lblStats.Size = new Size(0, 20);
         lblStats.TabIndex = 15;
@@ -229,7 +241,8 @@ partial class Form1
         // Form1
         AutoScaleDimensions = new SizeF(8F, 20F);
         AutoScaleMode = AutoScaleMode.Font;
-        ClientSize = new Size(694, 550);
+        ClientSize = new Size(900, 570);
+        Controls.Add(picImagePreview);
         Controls.Add(lblStats);
         Controls.Add(txtLog);
         Controls.Add(lblLog);
@@ -272,6 +285,7 @@ partial class Form1
     private Label lblImagePath;
     private TextBox txtImagePath;
     private Button btnBrowseImage;
+    private PictureBox picImagePreview;
     private Label lblOutputPath;
     private TextBox txtOutputPath;
     private Button btnBrowseOutput;

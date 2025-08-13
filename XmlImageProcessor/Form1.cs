@@ -8,12 +8,35 @@ namespace XmlImageProcessor;
 public partial class Form1 : Form
 {
     private AppSettings settings;
+    private bool isInitializing = true;
 
     public Form1()
     {
         InitializeComponent();
         settings = AppSettings.Load();
+        InitializeImagePreview();
         LoadDefaultPaths();
+        isInitializing = false;
+    }
+
+    private void InitializeImagePreview()
+    {
+        // Set up the image preview with a placeholder
+        picImagePreview.Image = null;
+        picImagePreview.BackColor = Color.LightGray;
+        
+        // Add a context menu for the preview
+        var contextMenu = new ContextMenuStrip();
+        
+        var refreshItem = new ToolStripMenuItem("Refresh Preview");
+        refreshItem.Click += (s, e) => RefreshImagePreview();
+        contextMenu.Items.Add(refreshItem);
+        
+        var clearItem = new ToolStripMenuItem("Clear Preview");
+        clearItem.Click += (s, e) => ClearImagePreview();
+        contextMenu.Items.Add(clearItem);
+        
+        picImagePreview.ContextMenuStrip = contextMenu;
     }
 
     private void LoadDefaultPaths()
@@ -36,6 +59,8 @@ public partial class Form1 : Form
         if (!string.IsNullOrEmpty(defaultImage) && File.Exists(defaultImage))
         {
             txtImagePath.Text = defaultImage;
+            // Load image preview after the control is fully initialized
+            LoadImagePreview(defaultImage);
         }
         else if (!string.IsNullOrEmpty(settings.DefaultImageDirectory) && Directory.Exists(settings.DefaultImageDirectory))
         {
@@ -59,6 +84,109 @@ public partial class Form1 : Form
         }
     }
 
+    private void txtImagePath_TextChanged(object sender, EventArgs e)
+    {
+        // Skip during initialization to prevent conflicts
+        if (isInitializing) return;
+        
+        // Update preview when text changes (useful for manual entry)
+        string imagePath = txtImagePath.Text;
+        if (File.Exists(imagePath) && IsImageFile(imagePath))
+        {
+            LoadImagePreview(imagePath);
+        }
+        else
+        {
+            ClearImagePreview();
+        }
+    }
+
+    private void LoadImagePreview(string imagePath)
+    {
+        try
+        {
+            // Ensure the control is available
+            if (picImagePreview == null) return;
+            
+            // Dispose of the previous image to free memory
+            if (picImagePreview.Image != null)
+            {
+                picImagePreview.Image.Dispose();
+                picImagePreview.Image = null;
+            }
+
+            // Load the new image
+            using (var originalImage = Image.FromFile(imagePath))
+            {
+                // Create a copy to avoid file locking issues
+                picImagePreview.Image = new Bitmap(originalImage);
+            }
+
+            // Update tooltip with image information
+            var fileInfo = new FileInfo(imagePath);
+            string tooltip = $"File: {Path.GetFileName(imagePath)}\n" +
+                           $"Size: {fileInfo.Length / 1024} KB\n" +
+                           $"Dimensions: {picImagePreview.Image.Width} x {picImagePreview.Image.Height}";
+            
+            var toolTip = new ToolTip();
+            toolTip.SetToolTip(picImagePreview, tooltip);
+            
+            // Log successful load for debugging
+            if (!isInitializing)
+            {
+                LogMessage($"Image preview loaded: {Path.GetFileName(imagePath)}");
+            }
+        }
+        catch (Exception ex)
+        {
+            // If image can't be loaded, show error and clear preview
+            ClearImagePreview();
+            if (!isInitializing)
+            {
+                LogMessage($"Warning: Could not load image preview for '{imagePath}': {ex.Message}");
+            }
+        }
+    }
+
+    private void RefreshImagePreview()
+    {
+        // Method to force refresh the image preview
+        string imagePath = txtImagePath.Text;
+        if (!string.IsNullOrEmpty(imagePath) && File.Exists(imagePath) && IsImageFile(imagePath))
+        {
+            LoadImagePreview(imagePath);
+        }
+        else
+        {
+            ClearImagePreview();
+        }
+    }
+
+    private void ClearImagePreview()
+    {
+        if (picImagePreview?.Image != null)
+        {
+            picImagePreview.Image.Dispose();
+            picImagePreview.Image = null;
+        }
+        
+        if (picImagePreview != null)
+        {
+            picImagePreview.BackColor = Color.LightGray;
+            
+            // Clear tooltip
+            var toolTip = new ToolTip();
+            toolTip.SetToolTip(picImagePreview, "No image selected");
+        }
+    }
+
+    private bool IsImageFile(string filePath)
+    {
+        string[] supportedExtensions = { ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff" };
+        string extension = Path.GetExtension(filePath).ToLowerInvariant();
+        return supportedExtensions.Contains(extension);
+    }
+
     private void settingsToolStripMenuItem_Click(object sender, EventArgs e)
     {
         using var settingsForm = new SettingsForm(settings);
@@ -66,7 +194,9 @@ public partial class Form1 : Form
         {
             // Reload settings and update UI
             settings = AppSettings.Load();
+            isInitializing = true;
             LoadDefaultPaths();
+            isInitializing = false;
         }
     }
 
@@ -120,6 +250,8 @@ public partial class Form1 : Form
         if (openFileDialog.ShowDialog() == DialogResult.OK)
         {
             txtImagePath.Text = openFileDialog.FileName;
+            // Ensure the preview is loaded immediately
+            LoadImagePreview(openFileDialog.FileName);
         }
     }
 
@@ -376,7 +508,30 @@ public partial class Form1 : Form
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         SaveLastUsedPaths();
+        
+        // Clean up image resources
+        if (picImagePreview.Image != null)
+        {
+            picImagePreview.Image.Dispose();
+            picImagePreview.Image = null;
+        }
+        
         base.OnFormClosing(e);
+    }
+
+    protected override void OnLoad(EventArgs e)
+    {
+        base.OnLoad(e);
+        
+        // Ensure the default image preview is loaded after the form is fully loaded
+        // This handles cases where the image wasn't loaded during constructor
+        if (!string.IsNullOrEmpty(txtImagePath.Text) && File.Exists(txtImagePath.Text) && IsImageFile(txtImagePath.Text))
+        {
+            // Use a small delay to ensure everything is rendered
+            this.BeginInvoke(new Action(() => {
+                LoadImagePreview(txtImagePath.Text);
+            }));
+        }
     }
 }
 
