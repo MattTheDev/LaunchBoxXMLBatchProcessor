@@ -361,6 +361,7 @@ public partial class Form1 : Form
                 ScreenshotGameplayImageDownloaded = bool.TryParse(gameElement.Element("ScreenshotGameplayImageDownloaded")?.Value, out bool gameplayResult) && gameplayResult,
                 VideoDownloaded = bool.TryParse(gameElement.Element("VideoDownloaded")?.Value, out bool videoResult) && videoResult,
                 Notes = gameElement.Element("Notes")?.Value ?? "",
+                AndroidBackgroundPath = gameElement.Element("AndroidBackgroundPath")?.Value ?? "",
                 XmlElement = gameElement // Store reference to XML element for modification
             })
             .ToList();
@@ -368,12 +369,18 @@ public partial class Form1 : Form
         // Filter games where BackgroundImageDownloaded is false
         var gamesWithoutBackground = allGames.Where(game => !game.BackgroundImageDownloaded).ToList();
         
+        // Count games that already have AndroidBackgroundPath
+        var gamesWithAndroidPath = gamesWithoutBackground.Where(game => !string.IsNullOrEmpty(game.AndroidBackgroundPath)).Count();
+        var gamesWithoutAndroidPath = gamesWithoutBackground.Count - gamesWithAndroidPath;
+        
         LogMessage($"Parsed {allGames.Count} total games from XML");
         LogMessage($"Found {gamesWithoutBackground.Count} games where BackgroundImageDownloaded is FALSE");
+        LogMessage($"  - {gamesWithAndroidPath} games already have AndroidBackgroundPath");
+        LogMessage($"  - {gamesWithoutAndroidPath} games need AndroidBackgroundPath added");
         LogMessage("Starting image copying and XML modification process...");
         LogMessage("");
 
-        // Update stats
+// Update stats
         lblStats.Text = $"Processing {gamesWithoutBackground.Count} games...";
         
         // Setup progress bar
@@ -399,6 +406,9 @@ public partial class Form1 : Form
                 {
                     bgElement.Value = "true";
                 }
+                
+                // Add or update AndroidBackgroundPath element
+                AddOrUpdateAndroidBackgroundPath(game.XmlElement, platformName, sanitizedTitle);
                 
                 processedCount++;
                 
@@ -440,6 +450,7 @@ public partial class Form1 : Form
         LogMessage($"Images copied to: {imagesDir}");
         LogMessage($"Modified XML saved to: {outputXmlPath}");
         LogMessage($"All BackgroundImageDownloaded flags updated to 'true'");
+        LogMessage($"AndroidBackgroundPath elements added/updated for all processed games");
         
         // Update final stats
         lblProgress.Text = "Processing complete!";
@@ -450,7 +461,8 @@ public partial class Form1 : Form
             $"Processing complete!\n\n" +
             $"Games processed: {processedCount}\n" +
             $"Images copied to: {imagesDir}\n" +
-            $"Modified XML saved to: {outputXmlPath}",
+            $"Modified XML saved to: {outputXmlPath}\n" +
+            $"AndroidBackgroundPath elements added/updated",
             "Success",
             MessageBoxButtons.OK,
             MessageBoxIcon.Information);
@@ -505,6 +517,54 @@ public partial class Form1 : Form
         return sanitized;
     }
 
+    // Helper method to add or update AndroidBackgroundPath element
+    private void AddOrUpdateAndroidBackgroundPath(XElement? gameElement, string platformName, string sanitizedGameTitle)
+    {
+        if (gameElement == null) return;
+
+        try
+        {
+            // Create the AndroidBackgroundPath value
+            // Format: Images/{Platform}/Background/{GameTitle}.jpg
+            string androidBackgroundPath = $"Images/{platformName}/Background/{sanitizedGameTitle}.jpg";
+            
+            // Check if AndroidBackgroundPath element already exists
+            var androidBgElement = gameElement.Element("AndroidBackgroundPath");
+            
+            if (androidBgElement != null)
+            {
+                // Update existing element
+                androidBgElement.Value = androidBackgroundPath;
+                LogMessage($"Updated AndroidBackgroundPath for '{gameElement.Element("Title")?.Value}': {androidBackgroundPath}");
+            }
+            else
+            {
+                // Create new AndroidBackgroundPath element
+                var newAndroidBgElement = new XElement("AndroidBackgroundPath", androidBackgroundPath);
+                
+                // Find a good position to insert the new element
+                // Try to insert after BackgroundImageDownloaded or at the end
+                var bgDownloadedElement = gameElement.Element("BackgroundImageDownloaded");
+                if (bgDownloadedElement != null)
+                {
+                    // Insert after BackgroundImageDownloaded
+                    bgDownloadedElement.AddAfterSelf(newAndroidBgElement);
+                }
+                else
+                {
+                    // Insert as the last child element
+                    gameElement.Add(newAndroidBgElement);
+                }
+                
+                LogMessage($"Added AndroidBackgroundPath for '{gameElement.Element("Title")?.Value}': {androidBackgroundPath}");
+            }
+        }
+        catch (Exception ex)
+        {
+            LogMessage($"Error adding/updating AndroidBackgroundPath for game '{gameElement.Element("Title")?.Value}': {ex.Message}");
+        }
+    }
+    
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         SaveLastUsedPaths();
@@ -552,6 +612,7 @@ public class Game
     public bool ScreenshotGameplayImageDownloaded { get; set; }
     public bool VideoDownloaded { get; set; }
     public string Notes { get; set; } = "";
+    public string AndroidBackgroundPath { get; set; } = "";
     public XElement? XmlElement { get; set; } // Reference to original XML element for modification
     
     public override string ToString()
@@ -563,6 +624,7 @@ public class Game
                $"Application Path: {ApplicationPath}\n" +
                $"ID: {Id}\n" +
                $"Release Date: {ReleaseDate}\n" +
-               $"Background Image Downloaded: {BackgroundImageDownloaded}\n";
+               $"Background Image Downloaded: {BackgroundImageDownloaded}\n" +
+               $"Android Background Path: {AndroidBackgroundPath}\n";
     }
 }
